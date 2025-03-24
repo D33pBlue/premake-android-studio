@@ -55,7 +55,7 @@ newaction {
             
     -- function overloads
     onWorkspace = function(wks)
-        p.generate(wks, "settings.gradle", p.modules.android_studio.generate_workspace_settings)
+        p.generate(wks, "settings.gradle.kts", p.modules.android_studio.generate_workspace_settings)
         p.generate(wks, "build.gradle",  p.modules.android_studio.generate_workspace)
         p.generate(wks, "gradle.properties", p.modules.android_studio.generate_gradle_properties)
         if wks.runconfigoptions and wks.runconfigmodule then
@@ -155,6 +155,13 @@ p.api.register
 p.api.register 
 {
     name = "androidnamespace",
+    scope = "project",
+    kind = "string"
+}
+
+p.api.register 
+{
+    name = "androidprojectname",
     scope = "project",
     kind = "string"
 }
@@ -318,4 +325,18 @@ p.api.register
     name = "androidtestrunner",
     scope = "project",
     kind = "string"
+}
+
+p.api.register 
+{
+    name = "findpackages",
+    scope = "config",
+    kind = "list:string"
+}
+
+p.api.register 
+{
+    name = "cmakeincludes",
+    scope = "config",
+    kind = "list:string"
 }
