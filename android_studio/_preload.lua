@@ -56,7 +56,7 @@ newaction {
     -- function overloads
     onWorkspace = function(wks)
         p.generate(wks, "settings.gradle.kts", p.modules.android_studio.generate_workspace_settings)
-        p.generate(wks, "build.gradle",  p.modules.android_studio.generate_workspace)
+        p.generate(wks, "build.gradle.kts",  p.modules.android_studio.generate_workspace)
         p.generate(wks, "gradle.properties", p.modules.android_studio.generate_gradle_properties)
         if wks.runconfigoptions and wks.runconfigmodule then
             p.generate(wks, "./../.idea/runConfigurations/" .. wks.name .. ".xml", p.modules.android_studio.generate_run_configuration)
@@ -69,7 +69,7 @@ newaction {
         if prj.androidmanifest == nil then
             p.generate(prj, prj.name .. "/src/main/AndroidManifest.xml",  p.modules.android_studio.generate_manifest)
         end
-        p.generate(prj, prj.name .. "/build.gradle",  p.modules.android_studio.generate_project)
+        p.generate(prj, prj.name .. "/build.gradle.kts",  p.modules.android_studio.generate_project)
         p.generate(prj, prj.name .. "/CMakeLists.txt",  p.modules.android_studio.generate_cmake_lists)
         p.generate(prj, prj.name .. "/google-services.json",  p.modules.android_studio.generate_googleservices)
     end
@@ -162,6 +162,13 @@ p.api.register
 p.api.register 
 {
     name = "androidprojectname",
+    scope = "project",
+    kind = "string"
+}
+
+p.api.register 
+{
+    name = "cmakeversion",
     scope = "project",
     kind = "string"
 }
@@ -338,5 +345,40 @@ p.api.register
 {
     name = "cmakeincludes",
     scope = "config",
+    kind = "list:string"
+}
+
+p.api.register
+{
+    name = "buildtypesconfiguration",
+    scope = "project",
+    kind = "key-array"
+}
+
+p.api.register
+{
+    name = "flavorsconfiguration",
+    scope = "project",
+    kind = "key-array"
+}
+
+p.api.register 
+{
+    name = "compileoptions",
+    scope = "project",
+    kind = "list:string"
+}
+
+p.api.register 
+{
+    name = "kotlinoptions",
+    scope = "project",
+    kind = "list:string"
+}
+
+p.api.register 
+{
+    name = "buildfeatures",
+    scope = "project",
     kind = "list:string"
 }
