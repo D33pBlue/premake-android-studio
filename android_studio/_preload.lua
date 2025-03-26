@@ -32,6 +32,25 @@ function create_gradle_wrapper(wks)
     end
 end
 
+function create_gradle_libs_versions(wks) 
+    -- create gradle wrapper
+    if wks.gradlelibsversion then
+        gradle = "[versions]\n"
+        for _, item in ipairs(wks.gradlelibsversion) do
+            gradle = (gradle .. item .. "\n")
+        end
+        gradle = (gradle .. "\n[libraries]\n")
+        for _, item in ipairs(wks.gradlelibraries) do
+            gradle = (gradle .. item .. "\n")
+        end
+        gradle = (gradle .. "\n[plugins]\n")
+        for _, item in ipairs(wks.gradleplugins) do
+            gradle = (gradle .. item .. "\n")
+        end
+        io.writefile(wks.location .. "/gradle/libs.versions.toml", gradle)
+    end
+end
+
 -- Premake extensions
 newaction {
     trigger     = "android-studio",
@@ -63,6 +82,7 @@ newaction {
         end
         create_asset_packs(wks)
         create_gradle_wrapper(wks)
+        create_gradle_libs_versions(wks)
     end,
 
     onProject = function(prj)
@@ -106,6 +126,27 @@ p.api.register
 p.api.register 
 {
     name = "gradlewrapper",
+    scope = "workspace",
+    kind = "list:string"
+}
+
+p.api.register 
+{
+    name = "gradlelibsversion",
+    scope = "workspace",
+    kind = "list:string"
+}
+
+p.api.register 
+{
+    name = "gradlelibraries",
+    scope = "workspace",
+    kind = "list:string"
+}
+
+p.api.register 
+{
+    name = "gradleplugins",
     scope = "workspace",
     kind = "list:string"
 }

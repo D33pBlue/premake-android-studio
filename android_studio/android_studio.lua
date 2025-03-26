@@ -125,8 +125,8 @@ function m.generate_workspace_settings(wks)
     p.x('    repositories {')
     p.x('        google {')
     p.x('            content {')
-    p.x('                includeGroupByRegex("com\\.android.*")')
-    p.x('                includeGroupByRegex("com\\.google.*")')
+    p.x('                includeGroupByRegex("com\\\\.android.*")')
+    p.x('                includeGroupByRegex("com\\\\.google.*")')
     p.x('                includeGroupByRegex("androidx.*")')
     p.x('            }')
     p.x('        }')
@@ -143,7 +143,7 @@ function m.generate_workspace_settings(wks)
     p.x('}\n')
 
     for prj in workspace.eachproject(wks) do
-        p.x('include ":%s"', prj.name)
+        p.x('include(":%s")', prj.name)
         p.x('project(":%s").projectDir = file("%s/%s")', prj.name, prj.location, prj.name)
         if prj.androidprojectname then
             p.x('rootProject.name = "%s"', prj.androidprojectname)
@@ -154,7 +154,7 @@ function m.generate_workspace_settings(wks)
     if wks.assetpacks then
         for name, value in pairs(wks.assetpacks) do
             for _, item in ipairs(value) do
-                p.x('include ":%s"', name)
+                p.x('include(":%s")', name)
             end
         end
     end 
@@ -510,7 +510,7 @@ function m.generate_project(prj)
     p.push('android {')
 
     if prj.androidnamespace then
-        p.x('namespace "%s"', prj.androidnamespace)
+        p.x('namespace = "%s"', prj.androidnamespace)
     end
 
     -- sdk / ndk etc
@@ -521,19 +521,19 @@ function m.generate_project(prj)
         prj.androidminsdkversion = "19"
     end        
         
-    p.x('compileSdk %s', prj.androidsdkversion)
+    p.x('compileSdk = %s', prj.androidsdkversion)
     
     if prj.androidndkpath ~= nil then
-        p.x('ndkPath \"%s\"', prj.androidndkpath)
+        p.x('ndkPath = \"%s\"', prj.androidndkpath)
     end
 
     if prj.androidndkversion ~= nil then
-        p.x('ndkVersion \"%s\"', prj.androidndkversion)
+        p.x('ndkVersion = \"%s\"', prj.androidndkversion)
     else
         if prj.androidndkpath ~= nil then
             local _, _, ndk_version = string.find(prj.androidndkpath, "ndk/(.+)")
             if ndk_version ~= nil then
-                p.x('ndkVersion \"%s\"', ndk_version)
+                p.x('ndkVersion = \"%s\"', ndk_version)
             end
         end
     end
@@ -542,10 +542,10 @@ function m.generate_project(prj)
     p.x('')
     p.push('defaultConfig {')
     if prj.androidappid then
-        p.x('applicationId "%s"', prj.androidappid)
+        p.x('applicationId = "%s"', prj.androidappid)
     end
-    p.x('minSdk %s', prj.androidminsdkversion)
-    p.x('targetSdk %s', prj.androidsdkversion)
+    p.x('minSdk = %s', prj.androidminsdkversion)
+    p.x('targetSdk = %s', prj.androidsdkversion)
 
     if prj.androidversioncode == nil then
         prj.androidversioncode = "1"
@@ -553,11 +553,11 @@ function m.generate_project(prj)
     if prj.androidversionname == nil then
         prj.androidversionname = "1.0"
     end
-    p.w('versionCode %s', prj.androidversioncode)
-    p.w('versionName \"%s\"', prj.androidversionname)
+    p.w('versionCode = %s', prj.androidversioncode)
+    p.w('versionName = \"%s\"', prj.androidversionname)
     
     if prj.androidtestrunner ~= nil then
-        p.x('testInstrumentationRunner \"%s\"', prj.androidtestrunner)
+        p.x('testInstrumentationRunner = \"%s\"', prj.androidtestrunner)
     end
     
     if complete_signing_info then
