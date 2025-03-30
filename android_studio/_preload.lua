@@ -90,8 +90,8 @@ newaction {
             p.generate(prj, prj.name .. "/src/main/AndroidManifest.xml",  p.modules.android_studio.generate_manifest)
         end
         p.generate(prj, prj.name .. "/build.gradle.kts",  p.modules.android_studio.generate_project)
-        p.generate(prj, prj.name .. "/CMakeLists.txt",  p.modules.android_studio.generate_cmake_lists)
-        p.generate(prj, prj.name .. "/google-services.json",  p.modules.android_studio.generate_googleservices)
+        p.generate(prj, prj.name .. "/src/main/cpp/CMakeLists.txt",  p.modules.android_studio.generate_cmake_lists)
+        -- p.generate(prj, prj.name .. "/google-services.json",  p.modules.android_studio.generate_googleservices)
     end
 }
 

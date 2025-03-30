@@ -143,11 +143,11 @@ function m.generate_workspace_settings(wks)
     p.x('}\n')
 
     for prj in workspace.eachproject(wks) do
-        p.x('include(":%s")', prj.name)
-        p.x('project(":%s").projectDir = file("%s/%s")', prj.name, prj.location, prj.name)
         if prj.androidprojectname then
             p.x('rootProject.name = "%s"', prj.androidprojectname)
         end
+        p.x('include(":%s")', prj.name)
+        -- p.x('project(":%s").projectDir = file("%s/%s")', prj.name, prj.location, prj.name)
     end
     
     -- insert asset packs
@@ -381,117 +381,96 @@ function m.generate_cmake_lists(prj)
         end
     end
     
-    p.x('project (%s)', prj.name)
+    p.x('project("%s")', prj.name)
     
     cmake_kind = get_cmake_program_kind(prj.kind)
     for cfg in project.eachconfig(prj) do                
-        -- somehow gradle wants lowecase debug / release but 
-        -- still passes "Debug" and "Release" to cmake
-        --for key, value in pairs(cfg.linktarget) do
-        --    print('\t', key, value)
-        --end
-        p.x('\n\n\n\nif(CMAKE_BUILD_TYPE STREQUAL "%s")', cfg.buildcfg)
-        -- flavor
-        if cfg.platform ~= nil then
-            p.x('\tif(${FLAVOR} STREQUAL "%s")', cfg.platform)
-        end
+        if cfg.buildcfg == "debug" then
+            -- flavor
+            if cfg.platform ~= nil then
+                p.x('\n\n\n\nif(${FLAVOR} STREQUAL "%s")', cfg.platform)
+            end
 
-        -- target                
-        local file_list = ""
-        for _, file in ipairs(cfg.files) do
-            for _, ext in ipairs(cmake_file_exts) do
-                if path.getextension(file) == ext then
-                    file_list = (file_list .. "\n\t\t\t" .. file)
+            -- target                
+            local file_list = ""
+            for _, file in ipairs(cfg.files) do
+                for _, ext in ipairs(cmake_file_exts) do
+                    if path.getextension(file) == ext then
+                        file_list = (file_list .. "\n\t\t" .. file)
+                    end
                 end
             end
-        end
-        if file_list ~= "" then
-            p.x('\n\t\tadd_library(%s %s %s)', prj.name, cmake_kind, file_list)
-        end
+            if file_list ~= "" then
+                p.x('\n\tadd_library(%s %s %s)', prj.name, cmake_kind, file_list)
+            end
 
-        -- cmake includes
-        for _, dir in ipairs(cfg.cmakeincludes) do
-            p.x('\n\t\tinclude(%s)', dir)
-        end
+            -- cmake includes
+            for _, dir in ipairs(cfg.cmakeincludes) do
+                p.x('\n\tinclude(%s)', dir)
+            end
 
-        -- find packages
-        for _, dir in ipairs(cfg.findpackages) do
-            p.x('\n\t\tfind_package(%s)', dir)
-        end
-        
-        -- include dirs
-        local include_dirs = ""
-        for _, dir in ipairs(cfg.includedirs) do
-            include_dirs = (include_dirs .. "\n\t\t\t" .. dir)
-        end
-        if include_dirs ~= "" then
-            p.x('\n\t\ttarget_include_directories(%s PUBLIC %s)', prj.name, include_dirs)
-        end
+            -- find packages
+            for _, dir in ipairs(cfg.findpackages) do
+                p.x('\n\tfind_package(%s)', dir)
+            end
+            
+            -- include dirs
+            local include_dirs = ""
+            for _, dir in ipairs(cfg.includedirs) do
+                include_dirs = (include_dirs .. "\n\t\t" .. dir)
+            end
+            if include_dirs ~= "" then
+                p.x('\n\ttarget_include_directories(%s PUBLIC %s)', prj.name, include_dirs)
+            end
 
-        -- toolset
-        local toolset = p.tools[cfg.toolset or "gcc"]
+            -- toolset
+            local toolset = p.tools[cfg.toolset or "gcc"]
+            
+            -- linker options
+            local linker_options = ""
+            if project_deps then
+                linker_options = linker_options .. project_deps
+            end
+            local ld_flags = toolset.getldflags(cfg)
+            if ld_flags then
+                linker_options = linker_options .. " " .. table.concat(ld_flags, " ")
+            end
 
-        -- C flags
-        --local c_flags = toolset.getcflags(cfg)  
-        --if #c_flags > 0 then
-        --    p.w('\n\t\tset(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} %s")', table.concat(c_flags, " "))
-        --end
-        
-        -- C++ flags
-        --local cxx_flags = toolset.getcxxflags(cfg)
-        --if #cxx_flags > 0 then
-        --    p.w('\n\t\tset(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} %s")', table.concat(cxx_flags, " "))
-        --end
-        
-        -- custom buildoptions
-        --if #cfg.buildoptions > 0 then
-        --    p.x('\n\t\ttarget_compile_options(%s PUBLIC %s)', prj.name, table.concat(cfg.buildoptions, " "))
-        --end
-        
-        -- linker options
-        local linker_options = ""
-        if project_deps then
-            linker_options = linker_options .. project_deps
-        end
-        local ld_flags = toolset.getldflags(cfg)
-        if ld_flags then
-            linker_options = linker_options .. " " .. table.concat(ld_flags, " ")
-        end
+            -- libdirs
+            for _, libdir in ipairs(cfg.libdirs) do
+                linker_options = linker_options .. " -L" .. libdir
+            end
+                    
+            local links = toolset.getlinks(cfg, "system", "fullpath")
+            if links then
+                for _, link in ipairs(links) do
+                    linker_options = linker_options .. "\n\t\t" .. string.sub(link,3)
+                end
+            end
+            if #linker_options > 0 then
+                p.x('\n\ttarget_link_libraries(%s %s)', prj.name, linker_options)
+            end
+                    
+            -- defines
+            local defines = ""
+            for _, define in ipairs(cfg.defines) do
+                defines = (defines .. " " .. define)
+            end
+            if defines ~= "" then
+                p.x('\n\ttarget_compile_definitions(%s PUBLIC %s)', prj.name, defines)
+            end
+            
+            -- injecting custom cmake code 
+            if prj.androidcmake then
+                for _, line in ipairs(prj.androidcmake) do
+                    p.x(line)
+                end
+            end
 
-    -- libdirs
-    for _, libdir in ipairs(cfg.libdirs) do
-            linker_options = linker_options .. " -L" .. libdir
-        end
-                
-        local links = toolset.getlinks(cfg, "system", "fullpath")
-        if links then
-            linker_options = linker_options .. "\n\t\t\t" .. table.concat(links, "\n\t\t\t")
-        end
-        if #linker_options > 0 then
-            p.x('\n\t\ttarget_link_libraries(%s %s)', prj.name, linker_options)
-        end
-                
-        -- defines
-        local defines = ""
-        for _, define in ipairs(cfg.defines) do
-            defines = (defines .. " " .. define)
-        end
-        if defines ~= "" then
-            p.x('\n\t\ttarget_compile_definitions(%s PUBLIC %s)', prj.name, defines)
-        end
-        
-        -- injecting custom cmake code 
-        if prj.androidcmake then
-            for _, line in ipairs(prj.androidcmake) do
-                p.x(line)
+            if cfg.platform ~= nil then
+                p.w('\nendif()')
             end
         end
-
-        if cfg.platform ~= nil then
-            p.w('\n\tendif()')
-        end
-        p.w('endif()')
-        
     end
 end
 
@@ -619,7 +598,7 @@ function m.generate_project(prj)
     p.x('')
     p.push('externalNativeBuild {')
     p.push('cmake {')
-    p.w('path = file("CMakeLists.txt")')
+    p.w('path = file("src/main/cpp/CMakeLists.txt")')
     p.w('version = "%s"', prj.cmakeversion)
     p.pop('}') -- cmake
     p.pop('}') -- externalNativeBuild
