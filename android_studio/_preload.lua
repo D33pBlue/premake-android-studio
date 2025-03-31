@@ -244,6 +244,13 @@ p.api.register
 
 p.api.register 
 {
+    name = "dependenciesfolder",
+    scope = "project",
+    kind = "file"
+}
+
+p.api.register 
+{
     name = "archivedirs",
     scope = "project",
     kind = "list:directory"
