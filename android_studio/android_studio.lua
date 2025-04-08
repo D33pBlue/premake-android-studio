@@ -388,92 +388,99 @@ function m.generate_cmake_lists(prj)
     p.x('\nset(DEP_PATH "%s")', prj.dependenciesfolder)
     
     cmake_kind = get_cmake_program_kind(prj.kind)
-    for cfg in project.eachconfig(prj) do                
-        if cfg.buildcfg == "debug" then
-            -- flavor
-            if cfg.platform ~= nil then
-                p.x('\n\n\n\nif(${FLAVOR} STREQUAL "%s")', cfg.platform)
-            end
+    for cfg in project.eachconfig(prj) do     
+        -- config           
+        if cfg.buildcfg ~= nil then
+            p.x('\n\n\n\nif(${CONF} STREQUAL "%s")', cfg.buildcfg)
+        end
 
-            -- target                
-            local file_list = ""
-            for _, file in ipairs(cfg.files) do
-                for _, ext in ipairs(cmake_file_exts) do
-                    if path.getextension(file) == ext then
-                        file_list = (file_list .. "\n\t\t" .. file)
-                    end
+        -- flavor
+        if cfg.platform ~= nil then
+            p.x('if(${FLAVOR} STREQUAL "%s")', cfg.platform)
+        end
+
+        -- target                
+        local file_list = ""
+        for _, file in ipairs(cfg.files) do
+            for _, ext in ipairs(cmake_file_exts) do
+                if path.getextension(file) == ext then
+                    file_list = (file_list .. "\n\t\t" .. file)
                 end
             end
-            if file_list ~= "" then
-                p.x('\n\tadd_library(%s %s %s)', prj.name, cmake_kind, file_list)
-            end
+        end
+        if file_list ~= "" then
+            p.x('\n\tadd_library(%s %s %s)', prj.name, cmake_kind, file_list)
+        end
 
-            -- cmake includes
-            for _, dir in ipairs(cfg.cmakeincludes) do
-                p.x('\n\tinclude(%s)', dir)
-            end
+        -- cmake includes
+        for _, dir in ipairs(cfg.cmakeincludes) do
+            p.x('\n\tinclude(%s)', dir)
+        end
 
-            -- find packages
-            for _, dir in ipairs(cfg.findpackages) do
-                p.x('\n\tfind_package(%s)', dir)
-            end
-            
-            -- include dirs
-            local include_dirs = ""
-            for _, dir in ipairs(cfg.includedirs) do
-                include_dirs = (include_dirs .. "\n\t\t" .. dir)
-            end
-            if include_dirs ~= "" then
-                p.x('\n\ttarget_include_directories(%s PUBLIC %s)', prj.name, include_dirs)
-            end
+        -- find packages
+        for _, dir in ipairs(cfg.findpackages) do
+            p.x('\n\tfind_package(%s)', dir)
+        end
+        
+        -- include dirs
+        local include_dirs = ""
+        for _, dir in ipairs(cfg.includedirs) do
+            include_dirs = (include_dirs .. "\n\t\t" .. dir)
+        end
+        if include_dirs ~= "" then
+            p.x('\n\ttarget_include_directories(%s PUBLIC %s)', prj.name, include_dirs)
+        end
 
-            -- toolset
-            local toolset = p.tools[cfg.toolset or "gcc"]
-            
-            -- linker options
-            local linker_options = ""
-            if project_deps then
-                linker_options = linker_options .. project_deps
-            end
-            local ld_flags = toolset.getldflags(cfg)
-            if ld_flags then
-                linker_options = linker_options .. " " .. table.concat(ld_flags, " ")
-            end
+        -- toolset
+        local toolset = p.tools[cfg.toolset or "gcc"]
+        
+        -- linker options
+        local linker_options = ""
+        if project_deps then
+            linker_options = linker_options .. project_deps
+        end
+        local ld_flags = toolset.getldflags(cfg)
+        if ld_flags then
+            linker_options = linker_options .. " " .. table.concat(ld_flags, " ")
+        end
 
-            -- libdirs
-            for _, libdir in ipairs(cfg.libdirs) do
-                linker_options = linker_options .. " -L" .. libdir
+        -- libdirs
+        for _, libdir in ipairs(cfg.libdirs) do
+            linker_options = linker_options .. " -L" .. libdir
+        end
+                
+        local links = toolset.getlinks(cfg, "system", "fullpath")
+        if links then
+            for _, link in ipairs(links) do
+                linker_options = linker_options .. "\n\t\t" .. string.sub(link,3)
             end
-                    
-            local links = toolset.getlinks(cfg, "system", "fullpath")
-            if links then
-                for _, link in ipairs(links) do
-                    linker_options = linker_options .. "\n\t\t" .. string.sub(link,3)
-                end
+        end
+        if #linker_options > 0 then
+            p.x('\n\ttarget_link_libraries(%s %s)', prj.name, linker_options)
+        end
+                
+        -- defines
+        local defines = ""
+        for _, define in ipairs(cfg.defines) do
+            defines = (defines .. " " .. define)
+        end
+        if defines ~= "" then
+            p.x('\n\ttarget_compile_definitions(%s PUBLIC %s)', prj.name, defines)
+        end
+        
+        -- injecting custom cmake code 
+        if prj.androidcmake then
+            for _, line in ipairs(prj.androidcmake) do
+                p.x(line)
             end
-            if #linker_options > 0 then
-                p.x('\n\ttarget_link_libraries(%s %s)', prj.name, linker_options)
-            end
-                    
-            -- defines
-            local defines = ""
-            for _, define in ipairs(cfg.defines) do
-                defines = (defines .. " " .. define)
-            end
-            if defines ~= "" then
-                p.x('\n\ttarget_compile_definitions(%s PUBLIC %s)', prj.name, defines)
-            end
-            
-            -- injecting custom cmake code 
-            if prj.androidcmake then
-                for _, line in ipairs(prj.androidcmake) do
-                    p.x(line)
-                end
-            end
+        end
 
-            if cfg.platform ~= nil then
-                p.w('\nendif()')
-            end
+        if cfg.platform ~= nil then
+            p.w('\nendif()')
+        end
+
+        if cfg.buildcfg ~= nil then
+            p.w('\nendif()')
         end
     end
 end
